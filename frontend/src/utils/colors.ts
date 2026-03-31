@@ -1,4 +1,7 @@
-// Life Dashboard Purple & Green Theme
+// Backward compatibility - redirect to theme
+// This file maintains the old API while using the new theme system
+
+// Default light theme colors for static imports
 export const Colors = {
   // Primary Purple shades
   primary: '#8B5CF6',

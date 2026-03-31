@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Colors, Shadows } from '../../src/utils/colors';
+import { useTheme, getShadows } from '../../src/utils/theme';
 import { Card } from '../../src/components/Card';
 import { ProgressRing } from '../../src/components/ProgressRing';
 import { QuickActionButton } from '../../src/components/QuickActionButton';
@@ -24,6 +24,8 @@ import { DashboardSummary } from '../../src/types';
 const MOOD_EMOJIS = ['😢', '😞', '😐', '🙂', '😊', '😄', '😁', '🤩', '🥳', '😍'];
 
 export default function HomeScreen() {
+  const { theme, toggleTheme, themeMode } = useTheme();
+  const shadows = getShadows(theme);
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -52,6 +54,16 @@ export default function HomeScreen() {
       setLoading(false);
     }
   }, [today]);
+
+  const seedMockData = async () => {
+    try {
+      await api.post('/seed');
+      await fetchDashboard();
+      Alert.alert('Success', 'Mock data has been seeded!');
+    } catch (error) {
+      console.error('Error seeding data:', error);
+    }
+  };
 
   useEffect(() => {
     fetchDashboard();
@@ -126,33 +138,47 @@ export default function HomeScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <ActivityIndicator size="large" color={theme.primary} />
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh} 
+            colors={[theme.primary]}
+            tintColor={theme.primary}
+          />
         }
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.greeting}>{getGreeting()} ✨</Text>
-            <Text style={styles.date}>{formatDisplayDate()}</Text>
+            <Text style={[styles.greeting, { color: theme.text }]}>{getGreeting()} ✨</Text>
+            <Text style={[styles.date, { color: theme.textSecondary }]}>{formatDisplayDate()}</Text>
           </View>
-          <TouchableOpacity style={styles.profileButton}>
-            <Ionicons name="person-circle-outline" size={40} color={Colors.primary} />
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity style={styles.themeButton} onPress={toggleTheme}>
+              <Ionicons 
+                name={themeMode === 'dark' ? 'sunny' : 'moon'} 
+                size={24} 
+                color={theme.primary} 
+              />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.profileButton}>
+              <Ionicons name="person-circle-outline" size={40} color={theme.primary} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Summary Cards */}
@@ -160,20 +186,20 @@ export default function HomeScreen() {
           {/* Habits Card */}
           <Card style={styles.summaryCard}>
             <View style={styles.cardHeader}>
-              <Ionicons name="checkbox" size={20} color={Colors.primary} />
-              <Text style={styles.cardTitle}>Habits</Text>
+              <Ionicons name="checkbox" size={20} color={theme.primary} />
+              <Text style={[styles.cardTitle, { color: theme.text }]}>Habits</Text>
             </View>
             <ProgressRing
               progress={summary?.habits.percentage || 0}
               size={70}
               strokeWidth={6}
-              color={Colors.primary}
+              color={theme.primary}
             >
-              <Text style={styles.progressText}>
+              <Text style={[styles.progressText, { color: theme.text }]}>
                 {summary?.habits.percentage || 0}%
               </Text>
             </ProgressRing>
-            <Text style={styles.cardSubtext}>
+            <Text style={[styles.cardSubtext, { color: theme.textSecondary }]}>
               {summary?.habits.completed || 0}/{summary?.habits.total || 0} done
             </Text>
           </Card>
@@ -181,18 +207,18 @@ export default function HomeScreen() {
           {/* Water Card */}
           <Card style={styles.summaryCard}>
             <View style={styles.cardHeader}>
-              <Ionicons name="water" size={20} color={Colors.secondary} />
-              <Text style={styles.cardTitle}>Water</Text>
+              <Ionicons name="water" size={20} color={theme.secondary} />
+              <Text style={[styles.cardTitle, { color: theme.text }]}>Water</Text>
             </View>
             <ProgressRing
               progress={summary?.water.percentage || 0}
               size={70}
               strokeWidth={6}
-              color={Colors.secondary}
+              color={theme.secondary}
             >
-              <Ionicons name="water" size={24} color={Colors.secondary} />
+              <Ionicons name="water" size={24} color={theme.secondary} />
             </ProgressRing>
-            <Text style={styles.cardSubtext}>
+            <Text style={[styles.cardSubtext, { color: theme.textSecondary }]}>
               {summary?.water.cups || 0}/{summary?.water.goal || 8} cups
             </Text>
           </Card>
@@ -200,11 +226,13 @@ export default function HomeScreen() {
           {/* Calories Card */}
           <Card style={styles.summaryCard}>
             <View style={styles.cardHeader}>
-              <Ionicons name="flame" size={20} color={Colors.warning} />
-              <Text style={styles.cardTitle}>Calories</Text>
+              <Ionicons name="flame" size={20} color={theme.warning} />
+              <Text style={[styles.cardTitle, { color: theme.text }]}>Calories</Text>
             </View>
-            <Text style={styles.calorieNumber}>{summary?.nutrition.calories || 0}</Text>
-            <Text style={styles.cardSubtext}>
+            <Text style={[styles.calorieNumber, { color: theme.warning }]}>
+              {summary?.nutrition.calories || 0}
+            </Text>
+            <Text style={[styles.cardSubtext, { color: theme.textSecondary }]}>
               {summary?.nutrition.meals || 0} meals logged
             </Text>
           </Card>
@@ -212,13 +240,13 @@ export default function HomeScreen() {
           {/* Mood Card */}
           <Card style={styles.summaryCard}>
             <View style={styles.cardHeader}>
-              <Ionicons name="happy" size={20} color={Colors.health} />
-              <Text style={styles.cardTitle}>Mood</Text>
+              <Ionicons name="happy" size={20} color={theme.health} />
+              <Text style={[styles.cardTitle, { color: theme.text }]}>Mood</Text>
             </View>
             <Text style={styles.moodEmoji}>
               {summary?.mood?.emoji || '😊'}
             </Text>
-            <Text style={styles.cardSubtext}>
+            <Text style={[styles.cardSubtext, { color: theme.textSecondary }]}>
               {summary?.mood ? `Level ${summary.mood.mood_level}/10` : 'Not logged'}
             </Text>
           </Card>
@@ -226,31 +254,31 @@ export default function HomeScreen() {
 
         {/* Quick Actions */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>Quick Actions</Text>
           <View style={styles.quickActions}>
             <QuickActionButton
               icon="checkbox-outline"
               label="Log Habit"
               onPress={() => router.push('/(tabs)/habits')}
-              color={Colors.primary}
+              color={theme.primary}
             />
             <QuickActionButton
               icon="water-outline"
               label="Add Water"
               onPress={() => setShowWaterModal(true)}
-              color={Colors.secondary}
+              color={theme.secondary}
             />
             <QuickActionButton
               icon="restaurant-outline"
               label="Log Meal"
               onPress={() => setShowMealModal(true)}
-              color={Colors.warning}
+              color={theme.warning}
             />
             <QuickActionButton
               icon="happy-outline"
               label="Log Mood"
               onPress={() => setShowMoodModal(true)}
-              color={Colors.health}
+              color={theme.health}
             />
           </View>
         </View>
@@ -259,46 +287,55 @@ export default function HomeScreen() {
         <Card style={styles.todayCard}>
           <View style={styles.todayHeader}>
             <View style={styles.todayTitleRow}>
-              <Ionicons name="fitness" size={24} color={Colors.primary} />
-              <Text style={styles.todayTitle}>Today's Fitness</Text>
+              <Ionicons name="fitness" size={24} color={theme.primary} />
+              <Text style={[styles.todayTitle, { color: theme.text }]}>Today's Fitness</Text>
             </View>
             <TouchableOpacity onPress={() => router.push('/(tabs)/fitness')}>
-              <Text style={styles.seeAllText}>Add +</Text>
+              <Text style={[styles.seeAllText, { color: theme.primary }]}>Add +</Text>
             </TouchableOpacity>
           </View>
-          <Text style={styles.todayContent}>
+          <Text style={[styles.todayContent, { color: theme.textSecondary }]}>
             {summary?.fitness.workouts_today === 0
               ? 'No workouts logged today. Time to get moving! 💪'
               : `${summary?.fitness.workouts_today} workout(s) completed!`}
           </Text>
         </Card>
+
+        {/* Seed Data Button (for testing) */}
+        <TouchableOpacity 
+          style={[styles.seedButton, { backgroundColor: theme.cardElevated, borderColor: theme.border }]}
+          onPress={seedMockData}
+        >
+          <Ionicons name="sparkles" size={18} color={theme.primary} />
+          <Text style={[styles.seedButtonText, { color: theme.textSecondary }]}>Load Sample Data</Text>
+        </TouchableOpacity>
       </ScrollView>
 
       {/* Water Modal */}
       <Modal visible={showWaterModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
+        <View style={[styles.modalOverlay, { backgroundColor: theme.overlay }]}>
           <Card style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Add Water 💧</Text>
-            <Text style={styles.modalSubtitle}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>Add Water 💧</Text>
+            <Text style={[styles.modalSubtitle, { color: theme.textSecondary }]}>
               Current: {summary?.water.cups || 0} / {summary?.water.goal || 8} cups
             </Text>
             <View style={styles.waterButtons}>
               <TouchableOpacity
-                style={styles.waterButton}
+                style={[styles.waterButton, { backgroundColor: theme.secondaryBg }]}
                 onPress={async () => {
                   await addWater();
                   setShowWaterModal(false);
                 }}
               >
-                <Ionicons name="water" size={32} color={Colors.secondary} />
-                <Text style={styles.waterButtonText}>+1 Cup</Text>
+                <Ionicons name="water" size={32} color={theme.secondary} />
+                <Text style={[styles.waterButtonText, { color: theme.secondary }]}>+1 Cup</Text>
               </TouchableOpacity>
             </View>
             <TouchableOpacity
               style={styles.closeButton}
               onPress={() => setShowWaterModal(false)}
             >
-              <Text style={styles.closeButtonText}>Close</Text>
+              <Text style={[styles.closeButtonText, { color: theme.textSecondary }]}>Close</Text>
             </TouchableOpacity>
           </Card>
         </View>
@@ -306,40 +343,53 @@ export default function HomeScreen() {
 
       {/* Mood Modal */}
       <Modal visible={showMoodModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
+        <View style={[styles.modalOverlay, { backgroundColor: theme.overlay }]}>
           <Card style={styles.modalContent}>
-            <Text style={styles.modalTitle}>How are you feeling? ✨</Text>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>How are you feeling? ✨</Text>
             <View style={styles.moodGrid}>
               {MOOD_EMOJIS.map((emoji, index) => (
                 <TouchableOpacity
                   key={index}
                   style={[
                     styles.moodOption,
-                    selectedMood === index + 1 && styles.moodOptionSelected,
+                    { backgroundColor: theme.background },
+                    selectedMood === index + 1 && { 
+                      backgroundColor: theme.primaryBg,
+                      borderWidth: 2,
+                      borderColor: theme.primary,
+                    },
                   ]}
                   onPress={() => setSelectedMood(index + 1)}
                 >
                   <Text style={styles.moodOptionEmoji}>{emoji}</Text>
-                  <Text style={styles.moodOptionLevel}>{index + 1}</Text>
+                  <Text style={[styles.moodOptionLevel, { color: theme.textSecondary }]}>{index + 1}</Text>
                 </TouchableOpacity>
               ))}
             </View>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { 
+                borderColor: theme.border, 
+                backgroundColor: theme.background,
+                color: theme.text,
+              }]}
               placeholder="Add a note (optional)"
+              placeholderTextColor={theme.textLight}
               value={moodNote}
               onChangeText={setMoodNote}
               multiline
             />
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
+                style={[styles.modalButton, styles.cancelButton, { 
+                  backgroundColor: theme.background, 
+                  borderColor: theme.border 
+                }]}
                 onPress={() => setShowMoodModal(false)}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={[styles.cancelButtonText, { color: theme.textSecondary }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, styles.saveButton]}
+                style={[styles.modalButton, styles.saveButton, { backgroundColor: theme.primary }]}
                 onPress={saveMood}
               >
                 <Text style={styles.saveButtonText}>Save</Text>
@@ -351,18 +401,28 @@ export default function HomeScreen() {
 
       {/* Meal Modal */}
       <Modal visible={showMealModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
+        <View style={[styles.modalOverlay, { backgroundColor: theme.overlay }]}>
           <Card style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Log Meal 🍽️</Text>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>Log Meal 🍽️</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { 
+                borderColor: theme.border, 
+                backgroundColor: theme.background,
+                color: theme.text,
+              }]}
               placeholder="Meal name"
+              placeholderTextColor={theme.textLight}
               value={mealName}
               onChangeText={setMealName}
             />
             <TextInput
-              style={styles.input}
+              style={[styles.input, { 
+                borderColor: theme.border, 
+                backgroundColor: theme.background,
+                color: theme.text,
+              }]}
               placeholder="Calories"
+              placeholderTextColor={theme.textLight}
               value={mealCalories}
               onChangeText={setMealCalories}
               keyboardType="numeric"
@@ -373,13 +433,15 @@ export default function HomeScreen() {
                   key={type}
                   style={[
                     styles.mealTypeButton,
-                    mealType === type && styles.mealTypeSelected,
+                    { backgroundColor: theme.background, borderColor: theme.border },
+                    mealType === type && { backgroundColor: theme.primary, borderColor: theme.primary },
                   ]}
                   onPress={() => setMealType(type)}
                 >
                   <Text
                     style={[
                       styles.mealTypeText,
+                      { color: theme.textSecondary },
                       mealType === type && styles.mealTypeTextSelected,
                     ]}
                   >
@@ -390,13 +452,16 @@ export default function HomeScreen() {
             </View>
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
+                style={[styles.modalButton, styles.cancelButton, { 
+                  backgroundColor: theme.background, 
+                  borderColor: theme.border 
+                }]}
                 onPress={() => setShowMealModal(false)}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={[styles.cancelButtonText, { color: theme.textSecondary }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, styles.saveButton]}
+                style={[styles.modalButton, styles.saveButton, { backgroundColor: theme.primary }]}
                 onPress={saveMeal}
               >
                 <Text style={styles.saveButtonText}>Save</Text>
@@ -412,7 +477,6 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   loadingContainer: {
     flex: 1,
@@ -435,12 +499,18 @@ const styles = StyleSheet.create({
   greeting: {
     fontSize: 28,
     fontWeight: '700',
-    color: Colors.text,
   },
   date: {
     fontSize: 14,
-    color: Colors.textSecondary,
     marginTop: 4,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  themeButton: {
+    padding: 8,
   },
   profileButton: {
     padding: 4,
@@ -465,22 +535,18 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.text,
   },
   progressText: {
     fontSize: 16,
     fontWeight: '700',
-    color: Colors.text,
   },
   cardSubtext: {
     fontSize: 12,
-    color: Colors.textSecondary,
     marginTop: 8,
   },
   calorieNumber: {
     fontSize: 32,
     fontWeight: '700',
-    color: Colors.warning,
   },
   moodEmoji: {
     fontSize: 40,
@@ -491,7 +557,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: Colors.text,
     marginBottom: 16,
   },
   quickActions: {
@@ -515,22 +580,32 @@ const styles = StyleSheet.create({
   todayTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.text,
   },
   seeAllText: {
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.primary,
   },
   todayContent: {
     fontSize: 14,
-    color: Colors.textSecondary,
     lineHeight: 20,
+  },
+  seedButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 8,
+  },
+  seedButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
   // Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -543,13 +618,11 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: Colors.text,
     textAlign: 'center',
     marginBottom: 8,
   },
   modalSubtitle: {
     fontSize: 14,
-    color: Colors.textSecondary,
     textAlign: 'center',
     marginBottom: 20,
   },
@@ -560,14 +633,12 @@ const styles = StyleSheet.create({
   waterButton: {
     alignItems: 'center',
     padding: 20,
-    backgroundColor: Colors.secondaryBg,
     borderRadius: 16,
     width: 120,
   },
   waterButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.secondary,
     marginTop: 8,
   },
   closeButton: {
@@ -576,7 +647,6 @@ const styles = StyleSheet.create({
   },
   closeButtonText: {
     fontSize: 16,
-    color: Colors.textSecondary,
   },
   moodGrid: {
     flexDirection: 'row',
@@ -590,29 +660,20 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 12,
     width: 56,
-    backgroundColor: Colors.background,
-  },
-  moodOptionSelected: {
-    backgroundColor: Colors.primaryBg,
-    borderWidth: 2,
-    borderColor: Colors.primary,
   },
   moodOptionEmoji: {
     fontSize: 24,
   },
   moodOptionLevel: {
     fontSize: 10,
-    color: Colors.textSecondary,
     marginTop: 2,
   },
   input: {
     borderWidth: 1,
-    borderColor: Colors.border,
     borderRadius: 12,
     padding: 14,
     fontSize: 16,
     marginBottom: 12,
-    backgroundColor: Colors.background,
   },
   modalButtons: {
     flexDirection: 'row',
@@ -626,17 +687,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelButton: {
-    backgroundColor: Colors.background,
     borderWidth: 1,
-    borderColor: Colors.border,
   },
   cancelButtonText: {
-    color: Colors.textSecondary,
     fontWeight: '600',
   },
-  saveButton: {
-    backgroundColor: Colors.primary,
-  },
+  saveButton: {},
   saveButtonText: {
     color: '#fff',
     fontWeight: '600',
@@ -651,17 +707,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: Colors.background,
     borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  mealTypeSelected: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
   },
   mealTypeText: {
     fontSize: 12,
-    color: Colors.textSecondary,
     fontWeight: '500',
   },
   mealTypeTextSelected: {

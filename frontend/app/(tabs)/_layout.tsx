@@ -1,17 +1,28 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../src/utils/colors';
 import { Platform, StyleSheet } from 'react-native';
+import { useTheme, getShadows } from '../../src/utils/theme';
 
 export default function TabLayout() {
+  const { theme } = useTheme();
+  const shadows = getShadows(theme);
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.textLight,
-        tabBarStyle: styles.tabBar,
+        tabBarActiveTintColor: theme.primary,
+        tabBarInactiveTintColor: theme.textLight,
+        tabBarStyle: {
+          backgroundColor: theme.tabBarBackground,
+          borderTopWidth: 0,
+          borderTopColor: theme.tabBarBorder,
+          ...shadows.medium,
+          height: Platform.OS === 'ios' ? 85 : 65,
+          paddingBottom: Platform.OS === 'ios' ? 25 : 8,
+          paddingTop: 8,
+        },
         tabBarLabelStyle: styles.tabBarLabel,
       }}
     >
@@ -74,18 +85,6 @@ export default function TabLayout() {
 }
 
 const styles = StyleSheet.create({
-  tabBar: {
-    backgroundColor: Colors.card,
-    borderTopWidth: 0,
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    height: Platform.OS === 'ios' ? 85 : 65,
-    paddingBottom: Platform.OS === 'ios' ? 25 : 8,
-    paddingTop: 8,
-  },
   tabBarLabel: {
     fontSize: 10,
     fontWeight: '600',

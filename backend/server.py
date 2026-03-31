@@ -830,6 +830,9 @@ async def get_dashboard_summary(date: str):
         if days_since >= item.get("frequency_days", 7):
             overdue_laundry += 1
     
+    # Journal entries
+    journal_entries = await db.journal_entries.find({"date": date}).to_list(10)
+    
     return {
         "date": date,
         "habits": {
@@ -853,8 +856,129 @@ async def get_dashboard_summary(date: str):
         },
         "laundry": {
             "overdue_count": overdue_laundry
+        },
+        "journal": {
+            "entries_today": len(journal_entries)
         }
     }
+
+# ========== SEED / MOCK DATA ==========
+@api_router.post("/seed")
+async def seed_mock_data():
+    """Seed the database with mock data for testing"""
+    today = datetime.now()
+    today_str = today.strftime("%Y-%m-%d")
+    
+    # Clear existing data (optional - comment out to keep existing)
+    # await db.habits.delete_many({})
+    # await db.habit_logs.delete_many({})
+    # etc.
+    
+    # Check if already seeded
+    existing_habits = await db.habits.count_documents({})
+    if existing_habits > 3:
+        return {"message": "Data already seeded", "status": "skipped"}
+    
+    # Seed Habits
+    habits_data = [
+        {"name": "Drink 8 glasses of water", "category": "health", "icon": "water", "streak": 5, "best_streak": 12, "total_completions": 45},
+        {"name": "Morning meditation", "category": "personal", "icon": "heart", "streak": 3, "best_streak": 7, "total_completions": 28},
+        {"name": "Read for 30 minutes", "category": "productivity", "icon": "book", "streak": 7, "best_streak": 14, "total_completions": 62},
+        {"name": "Exercise", "category": "health", "icon": "fitness", "streak": 2, "best_streak": 10, "total_completions": 35},
+        {"name": "No social media", "category": "productivity", "icon": "phone-portrait", "streak": 1, "best_streak": 5, "total_completions": 18},
+    ]
+    
+    for h in habits_data:
+        habit = Habit(**h)
+        await db.habits.insert_one(habit.dict())
+        # Add some completion logs
+        for i in range(min(h["streak"], 7)):
+            date = (today - timedelta(days=i)).strftime("%Y-%m-%d")
+            log = HabitLog(habit_id=habit.id, date=date, completed=True)
+            await db.habit_logs.insert_one(log.dict())
+    
+    # Seed Water entries for last 7 days
+    for i in range(7):
+        date = (today - timedelta(days=i)).strftime("%Y-%m-%d")
+        cups = 4 + (i % 5)  # Vary between 4-8 cups
+        water = WaterEntry(date=date, cups=cups, goal=8, logs=[{"time": "09:00", "cups": 2}, {"time": "14:00", "cups": cups - 2}])
+        existing = await db.water_entries.find_one({"date": date})
+        if not existing:
+            await db.water_entries.insert_one(water.dict())
+    
+    # Seed Nutrition entries
+    meals_data = [
+        {"name": "Oatmeal with berries", "calories": 320, "protein": 12, "carbs": 45, "fats": 8, "meal_type": "breakfast"},
+        {"name": "Grilled chicken salad", "calories": 450, "protein": 35, "carbs": 20, "fats": 15, "meal_type": "lunch"},
+        {"name": "Protein smoothie", "calories": 280, "protein": 25, "carbs": 30, "fats": 5, "meal_type": "snack"},
+        {"name": "Salmon with vegetables", "calories": 520, "protein": 40, "carbs": 25, "fats": 22, "meal_type": "dinner"},
+    ]
+    
+    for m in meals_data:
+        meal = MealEntry(date=today_str, **m)
+        await db.meal_entries.insert_one(meal.dict())
+    
+    # Seed Fitness entries
+    workouts_data = [
+        {
+            "workout_type": "Push",
+            "exercises": [
+                {"name": "Bench Press", "sets": 4, "reps": 10, "weight": 135},
+                {"name": "Shoulder Press", "sets": 3, "reps": 12, "weight": 60},
+                {"name": "Tricep Dips", "sets": 3, "reps": 15, "weight": 0},
+            ],
+            "duration_minutes": 45
+        },
+        {
+            "workout_type": "Cardio",
+            "exercises": [
+                {"name": "Running", "sets": 1, "reps": 1, "weight": 0, "notes": "5K run"},
+            ],
+            "duration_minutes": 30
+        }
+    ]
+    
+    for i, w in enumerate(workouts_data):
+        date = (today - timedelta(days=i)).strftime("%Y-%m-%d")
+        workout = WorkoutEntry(date=date, **w)
+        await db.workout_entries.insert_one(workout.dict())
+    
+    # Seed Mood entries for last 7 days
+    moods = ["😄", "🙂", "😊", "😐", "🙂", "😄", "😊"]
+    levels = [9, 7, 8, 5, 7, 9, 8]
+    for i in range(7):
+        date = (today - timedelta(days=i)).strftime("%Y-%m-%d")
+        mood = MoodEntry(date=date, mood_level=levels[i], emoji=moods[i], notes="Feeling good!" if levels[i] > 6 else None)
+        existing = await db.mood_entries.find_one({"date": date})
+        if not existing:
+            await db.mood_entries.insert_one(mood.dict())
+    
+    # Seed Journal entries
+    journal_data = [
+        {"content": "Today was a productive day. I managed to complete all my tasks and even had time for a workout. Feeling accomplished!", "mood": "😄", "tags": ["productive", "workout", "gratitude"]},
+        {"content": "Started reading a new book on mindfulness. The concepts are fascinating and I'm trying to incorporate them into my daily routine.", "mood": "🙂", "tags": ["reading", "mindfulness", "personal-growth"]},
+        {"content": "Had a great catch-up with an old friend. Sometimes these conversations remind me how important it is to maintain relationships.", "mood": "😊", "tags": ["friends", "social", "gratitude"]},
+    ]
+    
+    for i, j in enumerate(journal_data):
+        date = (today - timedelta(days=i)).strftime("%Y-%m-%d")
+        entry = JournalEntry(date=date, content=j["content"], mood=j["mood"], tags=j["tags"], prompt=JOURNAL_PROMPTS[i % len(JOURNAL_PROMPTS)])
+        await db.journal_entries.insert_one(entry.dict())
+    
+    # Seed Calendar events
+    events_data = [
+        {"title": "Team Meeting", "category": "work", "time": "10:00"},
+        {"title": "Gym Session", "category": "personal", "time": "18:00"},
+        {"title": "Project Deadline", "category": "work", "time": "17:00"},
+        {"title": "Study Session", "category": "school", "time": "14:00"},
+    ]
+    
+    for i, e in enumerate(events_data):
+        date = (today + timedelta(days=i)).strftime("%Y-%m-%d")
+        event = CalendarEvent(date=date, **e)
+        await db.calendar_events.insert_one(event.dict())
+    
+    return {"message": "Mock data seeded successfully", "status": "success"}
 
 # Include router
 app.include_router(api_router)
