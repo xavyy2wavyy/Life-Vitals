@@ -22,11 +22,17 @@ export interface MoodEntry {
   notes?: string;
 }
 
+export interface WaterLog {
+  time: string;
+  cups: number;
+}
+
 export interface WaterEntry {
   id: string;
   date: string;
   cups: number;
   goal: number;
+  logs: WaterLog[];
 }
 
 export interface MealEntry {
@@ -56,11 +62,19 @@ export interface WorkoutEntry {
   duration_minutes?: number;
 }
 
+export interface LaundryHistory {
+  date: string;
+  notes?: string;
+  timestamp?: string;
+}
+
 export interface LaundryEntry {
   id: string;
-  category: 'clothes' | 'bedding' | 'gym_clothes';
+  category: 'clothes' | 'bedding' | 'gym_clothes' | string;
   last_done: string;
+  frequency_days: number;
   notes?: string;
+  history: LaundryHistory[];
 }
 
 export interface CalendarEvent {
@@ -93,4 +107,24 @@ export interface DashboardSummary {
   fitness: {
     workouts_today: number;
   };
+}
+
+export interface JournalEntry {
+  id: string;
+  date: string;
+  tracker_type: string;
+  content: string;
+  images: string[];
+  mood?: string;
+  tags: string[];
+  prompt?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface JournalEntriesResponse {
+  entries: JournalEntry[];
+  total: number;
+  limit: number;
+  offset: number;
 }

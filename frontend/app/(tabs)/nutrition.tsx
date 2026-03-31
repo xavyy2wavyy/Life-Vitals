@@ -12,12 +12,12 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons'
 import { Colors, Shadows } from '../../src/utils/colors';
 import { Card } from '../../src/components/Card';
 import { ProgressRing } from '../../src/components/ProgressRing';
 import { api, getToday } from '../../src/utils/api';
-import { MealEntry, LaundryEntry } from '../../src/types';
+import { MealEntry, WaterEntry } from '../../src/types';
 
 const MEAL_ICONS = {
   breakfast: 'sunny',
@@ -28,9 +28,16 @@ const MEAL_ICONS = {
 
 const CALORIE_GOAL = 2000;
 
+interface WaterHistory {
+  date: string;
+  cups: number;
+  goal: number;
+}
+
 export default function NutritionScreen() {
   const [meals, setMeals] = useState<MealEntry[]>([]);
-  const [laundry, setLaundry] = useState<LaundryEntry[]>([]);
+  const [water, setWater] = useState<WaterEntry | null>(null);
+  const [waterHistory, setWaterHistory] = useState<WaterHistory[]>([]);
   const [summary, setSummary] = useState({
     total_calories: 0,
     total_protein: 0,
@@ -41,8 +48,7 @@ export default function NutritionScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showMealModal, setShowMealModal] = useState(false);
-  const [showLaundryModal, setShowLaundryModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<'nutrition' | 'laundry'>('nutrition');
+  const [activeTab, setActiveTab] = useState<'nutrition' | 'water'>('nutrition');
   
   // Meal form
   const [mealName, setMealName] = useState('');
@@ -56,14 +62,16 @@ export default function NutritionScreen() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [mealsData, summaryData, laundryData] = await Promise.all([
+      const [mealsData, summaryData, waterData, waterHistoryData] = await Promise.all([
         api.get(`/nutrition/${today}`),
         api.get(`/nutrition/summary/${today}`),
-        api.get('/laundry'),
+        api.get(`/water/${today}`),
+        api.get('/water/history/7'),
       ]);
       setMeals(mealsData);
       setSummary(summaryData);
-      setLaundry(laundryData);
+      setWater(waterData);
+      setWaterHistory(waterHistoryData);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -131,50 +139,17 @@ export default function NutritionScreen() {
     ]);
   };
 
-  const markLaundryDone = async (category: string) => {
+  const addWater = async (cups: number = 1) => {
     try {
-      await api.post('/laundry', {
-        category,
-        last_done: today,
-      });
+      await api.post(`/water/${today}/add?cups=${cups}`);
       await fetchData();
     } catch (error) {
-      console.error('Error updating laundry:', error);
+      console.error('Error adding water:', error);
     }
-  };
-
-  const getDaysAgo = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const todayDate = new Date(today);
-    const diff = Math.floor((todayDate.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-    if (diff === 0) return 'Today';
-    if (diff === 1) return '1 day ago';
-    return `${diff} days ago`;
-  };
-
-  const getLaundryStatus = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const todayDate = new Date(today);
-    const diff = Math.floor((todayDate.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-    if (diff >= 7) return { color: Colors.error, text: 'Overdue!' };
-    if (diff >= 5) return { color: Colors.warning, text: 'Due soon' };
-    return { color: Colors.success, text: 'Good' };
-  };
-
-  const getLaundryIcon = (category: string) => {
-    switch (category) {
-      case 'clothes': return 'shirt';
-      case 'bedding': return 'bed';
-      case 'gym_clothes': return 'fitness';
-      default: return 'basket';
-    }
-  };
-
-  const formatCategory = (cat: string) => {
-    return cat.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
   const caloriePercentage = Math.min((summary.total_calories / CALORIE_GOAL) * 100, 100);
+  const waterPercentage = water ? Math.min((water.cups / water.goal) * 100, 100) : 0;
 
   if (loading) {
     return (
@@ -190,7 +165,7 @@ export default function NutritionScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>
-          {activeTab === 'nutrition' ? 'Nutrition 🍎' : 'Laundry 🧱'}
+          {activeTab === 'nutrition' ? 'Nutrition 🍎' : 'Hydration 💧'}
         </Text>
       </View>
 
@@ -210,16 +185,16 @@ export default function NutritionScreen() {
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'laundry' && styles.activeTab]}
-          onPress={() => setActiveTab('laundry')}
+          style={[styles.tab, activeTab === 'water' && styles.activeTab]}
+          onPress={() => setActiveTab('water')}
         >
           <Ionicons
-            name="basket"
+            name="water"
             size={20}
-            color={activeTab === 'laundry' ? Colors.primary : Colors.textLight}
+            color={activeTab === 'water' ? Colors.secondary : Colors.textLight}
           />
-          <Text style={[styles.tabText, activeTab === 'laundry' && styles.activeTabText]}>
-            Laundry
+          <Text style={[styles.tabText, activeTab === 'water' && styles.activeTabText]}>
+            Water
           </Text>
         </TouchableOpacity>
       </View>
@@ -297,9 +272,17 @@ export default function NutritionScreen() {
                         <Text style={styles.mealName}>{meal.name}</Text>
                         <Text style={styles.mealType}>
                           {meal.meal_type.charAt(0).toUpperCase() + meal.meal_type.slice(1)}
+                          {meal.time ? ` • ${meal.time}` : ''}
                         </Text>
                       </View>
-                      <Text style={styles.mealCalories}>{meal.calories} cal</Text>
+                      <View style={styles.mealNutrition}>
+                        <Text style={styles.mealCalories}>{meal.calories} cal</Text>
+                        {(meal.protein || meal.carbs || meal.fats) ? (
+                          <Text style={styles.mealMacros}>
+                            P:{meal.protein}g C:{meal.carbs}g F:{meal.fats}g
+                          </Text>
+                        ) : null}
+                      </View>
                     </Card>
                   </TouchableOpacity>
                 ))}
@@ -314,37 +297,106 @@ export default function NutritionScreen() {
           </>
         ) : (
           <>
-            {/* Laundry Tracker */}
-            {laundry.map((item) => {
-              const status = getLaundryStatus(item.last_done);
-              return (
-                <Card key={item.id} style={styles.laundryCard}>
-                  <View style={styles.laundryHeader}>
-                    <View style={[styles.laundryIcon, { backgroundColor: Colors.primaryBg }]}>
-                      <Ionicons
-                        name={getLaundryIcon(item.category) as any}
-                        size={24}
-                        color={Colors.primary}
-                      />
+            {/* Water Summary */}
+            <Card style={styles.waterSummaryCard}>
+              <View style={styles.waterSummaryRow}>
+                <ProgressRing
+                  progress={waterPercentage}
+                  size={120}
+                  strokeWidth={12}
+                  color={Colors.secondary}
+                >
+                  <Ionicons name="water" size={40} color={Colors.secondary} />
+                </ProgressRing>
+                <View style={styles.waterSummaryInfo}>
+                  <Text style={styles.waterCount}>{water?.cups || 0}</Text>
+                  <Text style={styles.waterGoal}>/ {water?.goal || 8} cups</Text>
+                  <Text style={styles.waterSubtext}>
+                    {water && water.cups >= water.goal 
+                      ? '🎉 Goal reached!' 
+                      : `${(water?.goal || 8) - (water?.cups || 0)} cups to go`}
+                  </Text>
+                </View>
+              </View>
+            </Card>
+
+            {/* Quick Add Buttons */}
+            <View style={styles.quickAddRow}>
+              <TouchableOpacity 
+                style={styles.quickAddButton}
+                onPress={() => addWater(1)}
+              >
+                <View style={[styles.quickAddIcon, { backgroundColor: Colors.secondaryBg }]}>
+                  <Ionicons name="water" size={24} color={Colors.secondary} />
+                </View>
+                <Text style={styles.quickAddText}>+1 Cup</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.quickAddButton}
+                onPress={() => addWater(2)}
+              >
+                <View style={[styles.quickAddIcon, { backgroundColor: Colors.secondaryBg }]}>
+                  <Ionicons name="water" size={24} color={Colors.secondary} />
+                  <Ionicons name="water" size={18} color={Colors.secondary} style={styles.secondWaterIcon} />
+                </View>
+                <Text style={styles.quickAddText}>+2 Cups</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.quickAddButton}
+                onPress={() => addWater(3)}
+              >
+                <View style={[styles.quickAddIcon, { backgroundColor: Colors.secondaryBg }]}>
+                  <Text style={styles.quickAddNumber}>+3</Text>
+                </View>
+                <Text style={styles.quickAddText}>+3 Cups</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Water History */}
+            <View style={styles.historySection}>
+              <Text style={styles.historyTitle}>This Week</Text>
+              <View style={styles.historyGrid}>
+                {waterHistory.map((day, index) => {
+                  const dayName = new Date(day.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short' });
+                  const percentage = Math.min((day.cups / day.goal) * 100, 100);
+                  const isToday = day.date === today;
+                  
+                  return (
+                    <View key={day.date} style={styles.historyDay}>
+                      <Text style={[styles.historyDayName, isToday && styles.historyDayNameToday]}>
+                        {dayName}
+                      </Text>
+                      <View style={styles.historyBar}>
+                        <View 
+                          style={[
+                            styles.historyBarFill, 
+                            { 
+                              height: `${percentage}%`,
+                              backgroundColor: percentage >= 100 ? Colors.secondary : Colors.primaryLight
+                            }
+                          ]} 
+                        />
+                      </View>
+                      <Text style={styles.historyCups}>{day.cups}</Text>
                     </View>
-                    <View style={styles.laundryInfo}>
-                      <Text style={styles.laundryCategory}>{formatCategory(item.category)}</Text>
-                      <Text style={styles.laundryDate}>Last done: {getDaysAgo(item.last_done)}</Text>
-                    </View>
-                    <View style={[styles.statusBadge, { backgroundColor: status.color + '20' }]}>
-                      <Text style={[styles.statusText, { color: status.color }]}>{status.text}</Text>
-                    </View>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Water Logs for Today */}
+            {water?.logs && water.logs.length > 0 && (
+              <Card style={styles.logsCard}>
+                <Text style={styles.logsTitle}>Today's Log</Text>
+                {water.logs.map((log: any, index: number) => (
+                  <View key={index} style={styles.logItem}>
+                    <Ionicons name="time-outline" size={16} color={Colors.textSecondary} />
+                    <Text style={styles.logTime}>{log.time}</Text>
+                    <Text style={styles.logCups}>+{log.cups} cup{log.cups > 1 ? 's' : ''}</Text>
                   </View>
-                  <TouchableOpacity
-                    style={styles.markDoneButton}
-                    onPress={() => markLaundryDone(item.category)}
-                  >
-                    <Ionicons name="checkmark" size={18} color={Colors.secondary} />
-                    <Text style={styles.markDoneText}>Mark as Done</Text>
-                  </TouchableOpacity>
-                </Card>
-              );
-            })}
+                ))}
+              </Card>
+            )}
           </>
         )}
       </ScrollView>
@@ -598,10 +650,18 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginTop: 2,
   },
+  mealNutrition: {
+    alignItems: 'flex-end',
+  },
   mealCalories: {
     fontSize: 15,
     fontWeight: '600',
     color: Colors.primary,
+  },
+  mealMacros: {
+    fontSize: 10,
+    color: Colors.textLight,
+    marginTop: 2,
   },
   emptyCard: {
     alignItems: 'center',
@@ -618,56 +678,138 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginTop: 4,
   },
-  // Laundry
-  laundryCard: {
-    marginBottom: 12,
+  // Water Tab Styles
+  waterSummaryCard: {
+    marginBottom: 20,
+    padding: 24,
   },
-  laundryHeader: {
+  waterSummaryRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 24,
   },
-  laundryIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
+  waterSummaryInfo: {
+    alignItems: 'center',
+  },
+  waterCount: {
+    fontSize: 48,
+    fontWeight: '700',
+    color: Colors.secondary,
+  },
+  waterGoal: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+  },
+  waterSubtext: {
+    fontSize: 14,
+    color: Colors.textLight,
+    marginTop: 8,
+  },
+  quickAddRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 24,
+  },
+  quickAddButton: {
+    alignItems: 'center',
+  },
+  quickAddIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginBottom: 8,
+    ...Shadows.small,
   },
-  laundryInfo: {
-    flex: 1,
+  secondWaterIcon: {
+    position: 'absolute',
+    right: 12,
+    bottom: 12,
   },
-  laundryCategory: {
-    fontSize: 16,
+  quickAddNumber: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.secondary,
+  },
+  quickAddText: {
+    fontSize: 13,
     fontWeight: '600',
     color: Colors.text,
   },
-  laundryDate: {
-    fontSize: 13,
+  historySection: {
+    marginBottom: 20,
+  },
+  historyTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+    marginBottom: 12,
+  },
+  historyGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: Colors.card,
+    borderRadius: 16,
+    padding: 16,
+    ...Shadows.small,
+  },
+  historyDay: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  historyDayName: {
+    fontSize: 12,
     color: Colors.textSecondary,
-    marginTop: 2,
+    marginBottom: 8,
   },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusText: {
-    fontSize: 11,
+  historyDayNameToday: {
+    color: Colors.primary,
     fontWeight: '600',
   },
-  markDoneButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    marginTop: 12,
-    paddingVertical: 10,
-    backgroundColor: Colors.secondaryBg,
+  historyBar: {
+    width: 20,
+    height: 60,
+    backgroundColor: Colors.border,
+    borderRadius: 10,
+    overflow: 'hidden',
+    justifyContent: 'flex-end',
+    marginBottom: 6,
+  },
+  historyBarFill: {
+    width: '100%',
     borderRadius: 10,
   },
-  markDoneText: {
+  historyCups: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+  logsCard: {
+    marginBottom: 16,
+  },
+  logsTitle: {
     fontSize: 14,
+    fontWeight: '600',
+    color: Colors.text,
+    marginBottom: 12,
+  },
+  logItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  logTime: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    flex: 1,
+  },
+  logCups: {
+    fontSize: 13,
     fontWeight: '600',
     color: Colors.secondary,
   },
