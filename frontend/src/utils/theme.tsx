@@ -1,22 +1,26 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
-// Theme definitions
+// ============================================
+// GLOBAL THEME DEFINITIONS
+// ============================================
+
 export const lightTheme = {
   mode: 'light' as const,
-  // Primary Purple shades
+  
+  // Primary colors
   primary: '#8B5CF6',
   primaryLight: '#A78BFA',
   primaryDark: '#7C3AED',
   primaryBg: '#EDE9FE',
   
-  // Secondary Green shades
+  // Secondary colors (green)
   secondary: '#10B981',
   secondaryLight: '#34D399',
   secondaryDark: '#059669',
   secondaryBg: '#D1FAE5',
   
-  // Backgrounds & Cards
+  // Background colors
   background: '#F9FAFB',
   card: '#FFFFFF',
   cardElevated: '#FFFFFF',
@@ -27,21 +31,15 @@ export const lightTheme = {
   textLight: '#9CA3AF',
   textInverse: '#FFFFFF',
   
-  // Border
+  // Border & dividers
   border: '#E5E7EB',
+  divider: '#E5E7EB',
   
   // Status colors
   success: '#10B981',
   warning: '#F59E0B',
   error: '#EF4444',
   info: '#3B82F6',
-  
-  // Mood colors
-  moodGreat: '#10B981',
-  moodGood: '#34D399',
-  moodOkay: '#FBBF24',
-  moodBad: '#F97316',
-  moodTerrible: '#EF4444',
   
   // Category colors
   health: '#EC4899',
@@ -51,7 +49,7 @@ export const lightTheme = {
   school: '#6366F1',
   vanity: '#EC4899',
   
-  // Modal overlay
+  // Overlay
   overlay: 'rgba(0,0,0,0.5)',
   
   // Tab bar
@@ -61,46 +59,41 @@ export const lightTheme = {
 
 export const darkTheme = {
   mode: 'dark' as const,
-  // Primary Purple shades (brighter for dark mode)
-  primary: '#8B5CF6',
-  primaryLight: '#A78BFA',
-  primaryDark: '#7C3AED',
-  primaryBg: 'rgba(139, 92, 246, 0.15)',
   
-  // Secondary Green shades
-  secondary: '#10B981',
-  secondaryLight: '#34D399',
-  secondaryDark: '#059669',
-  secondaryBg: 'rgba(16, 185, 129, 0.15)',
+  // Primary colors (adjusted for dark mode)
+  primary: '#A78BFA',
+  primaryLight: '#C4B5FD',
+  primaryDark: '#8B5CF6',
+  primaryBg: 'rgba(167, 139, 250, 0.15)',
   
-  // Backgrounds & Cards (iPhone-style dark)
-  background: '#1C1C1E',
-  card: '#2C2C2E',
-  cardElevated: '#3A3A3C',
+  // Secondary colors (green - adjusted)
+  secondary: '#34D399',
+  secondaryLight: '#6EE7B7',
+  secondaryDark: '#10B981',
+  secondaryBg: 'rgba(52, 211, 153, 0.15)',
+  
+  // Background colors (iOS-style dark)
+  background: '#000000',
+  card: '#1C1C1E',
+  cardElevated: '#2C2C2E',
   
   // Text colors
   text: '#FFFFFF',
   textSecondary: '#EBEBF5',
   textLight: '#8E8E93',
-  textInverse: '#1F2937',
+  textInverse: '#000000',
   
-  // Border
-  border: '#3A3A3C',
+  // Border & dividers
+  border: '#38383A',
+  divider: '#38383A',
   
-  // Status colors
+  // Status colors (brighter for dark mode)
   success: '#30D158',
   warning: '#FFD60A',
   error: '#FF453A',
   info: '#64D2FF',
   
-  // Mood colors
-  moodGreat: '#30D158',
-  moodGood: '#34D399',
-  moodOkay: '#FFD60A',
-  moodBad: '#FF9F0A',
-  moodTerrible: '#FF453A',
-  
-  // Category colors
+  // Category colors (adjusted for dark mode)
   health: '#FF375F',
   personal: '#BF5AF2',
   productivity: '#64D2FF',
@@ -108,16 +101,20 @@ export const darkTheme = {
   school: '#5E5CE6',
   vanity: '#FF375F',
   
-  // Modal overlay
-  overlay: 'rgba(0,0,0,0.7)',
+  // Overlay
+  overlay: 'rgba(0,0,0,0.75)',
   
   // Tab bar
   tabBarBackground: '#1C1C1E',
-  tabBarBorder: '#3A3A3C',
+  tabBarBorder: '#38383A',
 };
 
 export type Theme = typeof lightTheme;
 export type ThemeMode = 'light' | 'dark';
+
+// ============================================
+// THEME CONTEXT
+// ============================================
 
 interface ThemeContextType {
   theme: Theme;
@@ -130,31 +127,51 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 const THEME_STORAGE_KEY = '@life_vitals_theme';
 
+// Simple storage abstraction that works on both web and native
+const storage = {
+  getItem: async (key: string): Promise<string | null> => {
+    try {
+      if (Platform.OS === 'web') {
+        return localStorage.getItem(key);
+      } else {
+        const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+        return await AsyncStorage.getItem(key);
+      }
+    } catch {
+      return null;
+    }
+  },
+  setItem: async (key: string, value: string): Promise<void> => {
+    try {
+      if (Platform.OS === 'web') {
+        localStorage.setItem(key, value);
+      } else {
+        const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+        await AsyncStorage.setItem(key, value);
+      }
+    } catch {
+      // Silently fail
+    }
+  },
+};
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [themeMode, setThemeModeState] = useState<ThemeMode>('dark'); // Default to dark
+  const [themeMode, setThemeModeState] = useState<ThemeMode>('dark');
 
   useEffect(() => {
     loadTheme();
   }, []);
 
   const loadTheme = async () => {
-    try {
-      const savedTheme = await AsyncStorage.getItem(THEME_STORAGE_KEY);
-      if (savedTheme && (savedTheme === 'light' || savedTheme === 'dark')) {
-        setThemeModeState(savedTheme);
-      }
-    } catch (error) {
-      console.error('Error loading theme:', error);
+    const savedTheme = await storage.getItem(THEME_STORAGE_KEY);
+    if (savedTheme === 'light' || savedTheme === 'dark') {
+      setThemeModeState(savedTheme);
     }
   };
 
   const setThemeMode = async (mode: ThemeMode) => {
-    try {
-      await AsyncStorage.setItem(THEME_STORAGE_KEY, mode);
-      setThemeModeState(mode);
-    } catch (error) {
-      console.error('Error saving theme:', error);
-    }
+    await storage.setItem(THEME_STORAGE_KEY, mode);
+    setThemeModeState(mode);
   };
 
   const toggleTheme = () => {
@@ -163,7 +180,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   };
 
   const theme = themeMode === 'dark' ? darkTheme : lightTheme;
-  
   const contextValue = { theme, themeMode, toggleTheme, setThemeMode };
 
   return (
@@ -181,27 +197,61 @@ export function useTheme() {
   return context;
 }
 
-// Shadow definitions that work in both themes
+// ============================================
+// SHADOW UTILITIES
+// ============================================
+
 export const getShadows = (theme: Theme) => ({
   small: {
-    shadowColor: theme.mode === 'dark' ? '#000' : '#000',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: theme.mode === 'dark' ? 0.3 : 0.05,
-    shadowRadius: 3,
+    shadowOpacity: theme.mode === 'dark' ? 0.3 : 0.08,
+    shadowRadius: 2,
     elevation: 2,
   },
   medium: {
-    shadowColor: theme.mode === 'dark' ? '#000' : '#000',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: theme.mode === 'dark' ? 0.4 : 0.1,
-    shadowRadius: 8,
+    shadowOpacity: theme.mode === 'dark' ? 0.4 : 0.12,
+    shadowRadius: 6,
     elevation: 4,
   },
   large: {
-    shadowColor: theme.mode === 'dark' ? '#000' : '#000',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: theme.mode === 'dark' ? 0.5 : 0.15,
-    shadowRadius: 12,
+    shadowOpacity: theme.mode === 'dark' ? 0.5 : 0.16,
+    shadowRadius: 10,
     elevation: 8,
   },
 });
+
+// ============================================
+// COMMON STYLES
+// ============================================
+
+export const spacing = {
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  xxl: 24,
+};
+
+export const borderRadius = {
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  full: 9999,
+};
+
+export const fontSize = {
+  xs: 10,
+  sm: 12,
+  md: 14,
+  lg: 16,
+  xl: 18,
+  xxl: 24,
+  xxxl: 28,
+};
