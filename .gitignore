@@ -83,3 +83,10 @@ android-sdk/-e
 # Environment files
 *.env
 *.env.*
+
+# Miscellaneous
+mongodb/
+data/
+frontend/node_modules/
+frontend/.metro-cache/
+**/node_modules/

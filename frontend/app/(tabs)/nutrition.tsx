@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons'
-import { Colors, Shadows } from '../../src/utils/colors';
+import { useTheme, getShadows } from '../../src/utils/theme';
 import { Card } from '../../src/components/Card';
 import { ProgressRing } from '../../src/components/ProgressRing';
 import { api, getToday } from '../../src/utils/api';
@@ -35,6 +35,8 @@ interface WaterHistory {
 }
 
 export default function NutritionScreen() {
+  const { theme } = useTheme();
+  const shadows = getShadows(theme);
   const [meals, setMeals] = useState<MealEntry[]>([]);
   const [water, setWater] = useState<WaterEntry | null>(null);
   const [waterHistory, setWaterHistory] = useState<WaterHistory[]>([]);
@@ -153,47 +155,47 @@ export default function NutritionScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <ActivityIndicator size="large" color={theme.primary} />
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.header}>
-        <Text style={styles.title}>
+        <Text style={[styles.title, { color: theme.text }]}>
           {activeTab === 'nutrition' ? 'Nutrition 🍎' : 'Hydration 💧'}
         </Text>
       </View>
 
       {/* Tab Switcher */}
-      <View style={styles.tabContainer}>
+      <View style={[styles.tabContainer, { backgroundColor: theme.card }]}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'nutrition' && styles.activeTab]}
+          style={[styles.tab, activeTab === 'nutrition' && [styles.activeTab, { backgroundColor: theme.primaryBg }]]}
           onPress={() => setActiveTab('nutrition')}
         >
           <Ionicons
             name="nutrition"
             size={20}
-            color={activeTab === 'nutrition' ? Colors.primary : Colors.textLight}
+            color={activeTab === 'nutrition' ? theme.primary : theme.textLight}
           />
-          <Text style={[styles.tabText, activeTab === 'nutrition' && styles.activeTabText]}>
+          <Text style={[styles.tabText, { color: activeTab === 'nutrition' ? theme.primary : theme.textLight }, activeTab === 'nutrition' && styles.activeTabText]}>
             Nutrition
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'water' && styles.activeTab]}
+          style={[styles.tab, activeTab === 'water' && [styles.activeTab, { backgroundColor: theme.primaryBg }]]}
           onPress={() => setActiveTab('water')}
         >
           <Ionicons
             name="water"
             size={20}
-            color={activeTab === 'water' ? Colors.secondary : Colors.textLight}
+            color={activeTab === 'water' ? theme.primary : theme.textLight}
           />
-          <Text style={[styles.tabText, activeTab === 'water' && styles.activeTabText]}>
+          <Text style={[styles.tabText, { color: activeTab === 'water' ? theme.primary : theme.textLight }, activeTab === 'water' && styles.activeTabText]}>
             Water
           </Text>
         </TouchableOpacity>
@@ -203,7 +205,7 @@ export default function NutritionScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} />
         }
         showsVerticalScrollIndicator={false}
       >
@@ -216,9 +218,9 @@ export default function NutritionScreen() {
                   progress={caloriePercentage}
                   size={100}
                   strokeWidth={10}
-                  color={caloriePercentage > 100 ? Colors.error : Colors.primary}
+                  color={caloriePercentage > 100 ? theme.error : theme.primary}
                 >
-                  <Ionicons name="flame" size={32} color={Colors.warning} />
+                  <Ionicons name="flame" size={32} color={theme.warning} />
                 </ProgressRing>
                 <View style={styles.summaryInfo}>
                   <Text style={styles.calorieCount}>{summary.total_calories}</Text>
@@ -261,11 +263,11 @@ export default function NutritionScreen() {
                     onLongPress={() => deleteMeal(meal.id)}
                   >
                     <Card style={styles.mealCard}>
-                      <View style={[styles.mealIcon, { backgroundColor: Colors.primaryBg }]}>
+                      <View style={[styles.mealIcon, { backgroundColor: theme.primaryBg }]}>
                         <Ionicons
                           name={MEAL_ICONS[meal.meal_type] as any}
                           size={22}
-                          color={Colors.primary}
+                          color={theme.primary}
                         />
                       </View>
                       <View style={styles.mealInfo}>
@@ -288,10 +290,10 @@ export default function NutritionScreen() {
                 ))}
               </View>
             ) : (
-              <Card style={styles.emptyCard}>
-                <Ionicons name="restaurant-outline" size={48} color={Colors.textLight} />
-                <Text style={styles.emptyText}>No meals logged today</Text>
-                <Text style={styles.emptySubtext}>Tap "Log Meal" to add your first meal</Text>
+              <Card style={[styles.emptyCard, { backgroundColor: theme.card }]}>
+                <Ionicons name="restaurant-outline" size={48} color={theme.textLight} />
+                <Text style={[styles.emptyText, { color: theme.text }]}>No meals logged today</Text>
+                <Text style={[styles.emptySubtext, { color: theme.textSecondary }]}>Tap "Log Meal" to add your first meal</Text>
               </Card>
             )}
           </>
@@ -304,9 +306,9 @@ export default function NutritionScreen() {
                   progress={waterPercentage}
                   size={120}
                   strokeWidth={12}
-                  color={Colors.secondary}
+                  color={theme.secondary}
                 >
-                  <Ionicons name="water" size={40} color={Colors.secondary} />
+                  <Ionicons name="water" size={40} color={theme.secondary} />
                 </ProgressRing>
                 <View style={styles.waterSummaryInfo}>
                   <Text style={styles.waterCount}>{water?.cups || 0}</Text>
@@ -326,29 +328,29 @@ export default function NutritionScreen() {
                 style={styles.quickAddButton}
                 onPress={() => addWater(1)}
               >
-                <View style={[styles.quickAddIcon, { backgroundColor: Colors.secondaryBg }]}>
-                  <Ionicons name="water" size={24} color={Colors.secondary} />
+                <View style={[styles.quickAddIcon, { backgroundColor: theme.secondaryBg }]}>
+                  <Ionicons name="water" size={24} color={theme.secondary} />
                 </View>
-                <Text style={styles.quickAddText}>+1 Cup</Text>
+                <Text style={[styles.quickAddText, { color: theme.text }]}>+1 Cup</Text>
               </TouchableOpacity>
               <TouchableOpacity 
                 style={styles.quickAddButton}
                 onPress={() => addWater(2)}
               >
-                <View style={[styles.quickAddIcon, { backgroundColor: Colors.secondaryBg }]}>
-                  <Ionicons name="water" size={24} color={Colors.secondary} />
-                  <Ionicons name="water" size={18} color={Colors.secondary} style={styles.secondWaterIcon} />
+                <View style={[styles.quickAddIcon, { backgroundColor: theme.secondaryBg }]}>
+                  <Ionicons name="water" size={24} color={theme.secondary} />
+                  <Ionicons name="water" size={18} color={theme.secondary} style={styles.secondWaterIcon} />
                 </View>
-                <Text style={styles.quickAddText}>+2 Cups</Text>
+                <Text style={[styles.quickAddText, { color: theme.text }]}>+2 Cups</Text>
               </TouchableOpacity>
               <TouchableOpacity 
                 style={styles.quickAddButton}
                 onPress={() => addWater(3)}
               >
-                <View style={[styles.quickAddIcon, { backgroundColor: Colors.secondaryBg }]}>
-                  <Text style={styles.quickAddNumber}>+3</Text>
+                <View style={[styles.quickAddIcon, { backgroundColor: theme.secondaryBg }]}>
+                  <Text style={[styles.quickAddNumber, { color: theme.primary }]}>+3</Text>
                 </View>
-                <Text style={styles.quickAddText}>+3 Cups</Text>
+                <Text style={[styles.quickAddText, { color: theme.text }]}>+3 Cups</Text>
               </TouchableOpacity>
             </View>
 
@@ -372,7 +374,7 @@ export default function NutritionScreen() {
                             styles.historyBarFill, 
                             { 
                               height: `${percentage}%`,
-                              backgroundColor: percentage >= 100 ? Colors.secondary : Colors.primaryLight
+                              backgroundColor: percentage >= 100 ? theme.secondary : theme.primaryLight
                             }
                           ]} 
                         />
@@ -390,9 +392,9 @@ export default function NutritionScreen() {
                 <Text style={styles.logsTitle}>Today's Log</Text>
                 {water.logs.map((log: any, index: number) => (
                   <View key={index} style={styles.logItem}>
-                    <Ionicons name="time-outline" size={16} color={Colors.textSecondary} />
-                    <Text style={styles.logTime}>{log.time}</Text>
-                    <Text style={styles.logCups}>+{log.cups} cup{log.cups > 1 ? 's' : ''}</Text>
+                    <Ionicons name="time-outline" size={16} color={theme.textSecondary} />
+                    <Text style={[styles.logTime, { color: theme.textSecondary }]}>{log.time}</Text>
+                    <Text style={[styles.logCups, { color: theme.text }]}>+{log.cups} cup{log.cups > 1 ? 's' : ''}</Text>
                   </View>
                 ))}
               </Card>
@@ -461,11 +463,12 @@ export default function NutritionScreen() {
                     <Ionicons
                       name={MEAL_ICONS[type] as any}
                       size={18}
-                      color={mealType === type ? '#fff' : Colors.textSecondary}
+                      color={mealType === type ? '#fff' : theme.textSecondary}
                     />
                     <Text
                       style={[
                         styles.mealTypeText,
+                        { color: theme.textSecondary },
                         mealType === type && styles.mealTypeTextSelected,
                       ]}
                     >
@@ -503,7 +506,6 @@ export default function NutritionScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   loadingContainer: {
     flex: 1,
@@ -517,16 +519,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: Colors.text,
   },
   tabContainer: {
     flexDirection: 'row',
     marginHorizontal: 20,
     marginTop: 16,
-    backgroundColor: Colors.card,
     borderRadius: 12,
     padding: 4,
-    ...Shadows.small,
   },
   tab: {
     flex: 1,
@@ -538,15 +537,13 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   activeTab: {
-    backgroundColor: Colors.primaryBg,
+    borderRadius: 10,
   },
   tabText: {
     fontSize: 14,
-    color: Colors.textLight,
     fontWeight: '500',
   },
   activeTabText: {
-    color: Colors.primary,
     fontWeight: '600',
   },
   scrollView: {
@@ -569,15 +566,12 @@ const styles = StyleSheet.create({
   calorieCount: {
     fontSize: 36,
     fontWeight: '700',
-    color: Colors.text,
   },
   calorieGoal: {
     fontSize: 14,
-    color: Colors.textSecondary,
   },
   mealCount: {
     fontSize: 12,
-    color: Colors.textLight,
     marginTop: 4,
   },
   macrosRow: {
@@ -586,7 +580,6 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
   },
   macroItem: {
     alignItems: 'center',
@@ -594,28 +587,23 @@ const styles = StyleSheet.create({
   macroValue: {
     fontSize: 18,
     fontWeight: '600',
-    color: Colors.text,
   },
   macroLabel: {
     fontSize: 12,
-    color: Colors.textSecondary,
     marginTop: 2,
   },
   macroDivider: {
     width: 1,
     height: 30,
-    backgroundColor: Colors.border,
   },
   addMealButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: Colors.primary,
     paddingVertical: 14,
     borderRadius: 14,
     marginBottom: 16,
-    ...Shadows.medium,
   },
   addMealText: {
     fontSize: 16,
@@ -643,11 +631,9 @@ const styles = StyleSheet.create({
   mealName: {
     fontSize: 15,
     fontWeight: '600',
-    color: Colors.text,
   },
   mealType: {
     fontSize: 12,
-    color: Colors.textSecondary,
     marginTop: 2,
   },
   mealNutrition: {
@@ -656,11 +642,9 @@ const styles = StyleSheet.create({
   mealCalories: {
     fontSize: 15,
     fontWeight: '600',
-    color: Colors.primary,
   },
   mealMacros: {
     fontSize: 10,
-    color: Colors.textLight,
     marginTop: 2,
   },
   emptyCard: {
@@ -670,12 +654,10 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontWeight: '600',
-    color: Colors.text,
     marginTop: 16,
   },
   emptySubtext: {
     fontSize: 14,
-    color: Colors.textSecondary,
     marginTop: 4,
   },
   // Water Tab Styles
@@ -695,15 +677,12 @@ const styles = StyleSheet.create({
   waterCount: {
     fontSize: 48,
     fontWeight: '700',
-    color: Colors.secondary,
   },
   waterGoal: {
     fontSize: 16,
-    color: Colors.textSecondary,
   },
   waterSubtext: {
     fontSize: 14,
-    color: Colors.textLight,
     marginTop: 8,
   },
   quickAddRow: {
@@ -721,7 +700,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
-    ...Shadows.small,
   },
   secondWaterIcon: {
     position: 'absolute',
@@ -731,12 +709,10 @@ const styles = StyleSheet.create({
   quickAddNumber: {
     fontSize: 18,
     fontWeight: '700',
-    color: Colors.secondary,
   },
   quickAddText: {
     fontSize: 13,
     fontWeight: '600',
-    color: Colors.text,
   },
   historySection: {
     marginBottom: 20,
@@ -744,16 +720,13 @@ const styles = StyleSheet.create({
   historyTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.text,
     marginBottom: 12,
   },
   historyGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: Colors.card,
     borderRadius: 16,
     padding: 16,
-    ...Shadows.small,
   },
   historyDay: {
     alignItems: 'center',
@@ -761,17 +734,14 @@ const styles = StyleSheet.create({
   },
   historyDayName: {
     fontSize: 12,
-    color: Colors.textSecondary,
     marginBottom: 8,
   },
   historyDayNameToday: {
-    color: Colors.primary,
     fontWeight: '600',
   },
   historyBar: {
     width: 20,
     height: 60,
-    backgroundColor: Colors.border,
     borderRadius: 10,
     overflow: 'hidden',
     justifyContent: 'flex-end',
@@ -784,7 +754,6 @@ const styles = StyleSheet.create({
   historyCups: {
     fontSize: 12,
     fontWeight: '600',
-    color: Colors.text,
   },
   logsCard: {
     marginBottom: 16,
@@ -792,7 +761,6 @@ const styles = StyleSheet.create({
   logsTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.text,
     marginBottom: 12,
   },
   logItem: {
@@ -801,17 +769,14 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 6,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
   },
   logTime: {
     fontSize: 13,
-    color: Colors.textSecondary,
     flex: 1,
   },
   logCups: {
     fontSize: 13,
     fontWeight: '600',
-    color: Colors.secondary,
   },
   // Modal
   modalOverlay: {
@@ -829,18 +794,15 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: Colors.text,
     textAlign: 'center',
     marginBottom: 20,
   },
   input: {
     borderWidth: 1,
-    borderColor: Colors.border,
     borderRadius: 12,
     padding: 14,
     fontSize: 16,
     marginBottom: 12,
-    backgroundColor: Colors.background,
   },
   macroInputRow: {
     flexDirection: 'row',
@@ -853,7 +815,6 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.text,
     marginBottom: 8,
   },
   mealTypeRow: {
@@ -869,17 +830,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: Colors.background,
     borderWidth: 1,
-    borderColor: Colors.border,
   },
   mealTypeSelected: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+    borderWidth: 1,
   },
   mealTypeText: {
     fontSize: 13,
-    color: Colors.textSecondary,
     fontWeight: '500',
   },
   mealTypeTextSelected: {
@@ -896,17 +853,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelButton: {
-    backgroundColor: Colors.background,
     borderWidth: 1,
-    borderColor: Colors.border,
   },
   cancelButtonText: {
-    color: Colors.textSecondary,
     fontWeight: '600',
   },
-  saveButton: {
-    backgroundColor: Colors.primary,
-  },
+  saveButton: {},
   saveButtonText: {
     color: '#fff',
     fontWeight: '600',

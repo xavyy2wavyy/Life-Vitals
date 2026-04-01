@@ -13,21 +13,30 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Shadows } from '../../src/utils/colors';
+import { Colors } from '../../src/utils/colors';
+import { useTheme, getShadows } from '../../src/utils/theme';
 import { Card } from '../../src/components/Card';
 import { api, getToday } from '../../src/utils/api';
 import { CalendarEvent, MoodEntry } from '../../src/types';
 
+const CATEGORY_COLORS = {
+  work: '#FF6B6B',
+  school: '#4ECDC4',
+  personal: '#45B7D1',
+  vanity: '#FFA07A',
+};
+
 const CATEGORIES = [
-  { key: 'work', label: 'Work', color: Colors.work, icon: 'briefcase' },
-  { key: 'school', label: 'School', color: Colors.school, icon: 'school' },
-  { key: 'personal', label: 'Personal', color: Colors.personal, icon: 'person' },
-  { key: 'vanity', label: 'Vanity', color: Colors.vanity, icon: 'sparkles' },
+  { key: 'work', label: 'Work', icon: 'briefcase' },
+  { key: 'school', label: 'School', icon: 'school' },
+  { key: 'personal', label: 'Personal', icon: 'person' },
+  { key: 'vanity', label: 'Vanity', icon: 'sparkles' },
 ] as const;
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export default function CalendarScreen() {
+  const { theme } = useTheme();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [moodHistory, setMoodHistory] = useState<MoodEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -165,7 +174,8 @@ export default function CalendarScreen() {
   };
 
   const getCategoryInfo = (category: string) => {
-    return CATEGORIES.find(c => c.key === category) || CATEGORIES[2];
+    const cat = CATEGORIES.find(c => c.key === category) || CATEGORIES[2];
+    return { ...cat, color: CATEGORY_COLORS[cat.key as keyof typeof CATEGORY_COLORS] };
   };
 
   const selectedDateEvents = events.filter(e => e.date === selectedDate);
@@ -173,43 +183,43 @@ export default function CalendarScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <ActivityIndicator size="large" color={theme.primary} />
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.primary]} />
         }
         showsVerticalScrollIndicator={false}
       >
         {/* Month Header */}
         <View style={styles.monthHeader}>
           <TouchableOpacity onPress={() => navigateMonth(-1)} style={styles.navButton}>
-            <Ionicons name="chevron-back" size={24} color={Colors.text} />
+            <Ionicons name="chevron-back" size={24} color={theme.text} />
           </TouchableOpacity>
-          <Text style={styles.monthTitle}>
+          <Text style={[styles.monthTitle, { color: theme.text }]}>
             {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
           </Text>
           <TouchableOpacity onPress={() => navigateMonth(1)} style={styles.navButton}>
-            <Ionicons name="chevron-forward" size={24} color={Colors.text} />
+            <Ionicons name="chevron-forward" size={24} color={theme.text} />
           </TouchableOpacity>
         </View>
 
         {/* Calendar Grid */}
-        <Card style={styles.calendarCard}>
+        <Card style={[styles.calendarCard, { backgroundColor: theme.card }]}>
           {/* Weekday Headers */}
           <View style={styles.weekdayRow}>
             {WEEKDAYS.map((day) => (
-              <Text key={day} style={styles.weekdayText}>{day}</Text>
+              <Text key={day} style={[styles.weekdayText, { color: theme.textSecondary }]}>{day}</Text>
             ))}
           </View>
 
@@ -231,15 +241,16 @@ export default function CalendarScreen() {
                   key={day}
                   style={[
                     styles.dayCell,
-                    isToday && styles.todayCell,
-                    isSelected && styles.selectedCell,
+                    isToday && [styles.todayCell, { backgroundColor: theme.primaryBg }],
+                    isSelected && [styles.selectedCell, { backgroundColor: theme.primary }],
                   ]}
                   onPress={() => setSelectedDate(dateKey)}
                 >
                   <Text
                     style={[
                       styles.dayNumber,
-                      isToday && styles.todayNumber,
+                      { color: theme.text },
+                      isToday && [styles.todayNumber, { color: theme.primary }],
                       isSelected && styles.selectedNumber,
                     ]}
                   >
@@ -267,7 +278,7 @@ export default function CalendarScreen() {
         {/* Selected Date Events */}
         <View style={styles.eventsSection}>
           <View style={styles.eventsSectionHeader}>
-            <Text style={styles.eventsSectionTitle}>
+            <Text style={[styles.eventsSectionTitle, { color: theme.text }]}>
               {selectedDate === today ? 'Today' : new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', {
                 weekday: 'short',
                 month: 'short',
@@ -275,7 +286,7 @@ export default function CalendarScreen() {
               })}
             </Text>
             <TouchableOpacity
-              style={styles.addEventButton}
+              style={[styles.addEventButton, { backgroundColor: theme.primary }]}
               onPress={() => setShowModal(true)}
             >
               <Ionicons name="add" size={20} color="#fff" />
@@ -290,10 +301,10 @@ export default function CalendarScreen() {
                   key={event.id}
                   onLongPress={() => deleteEvent(event.id)}
                 >
-                  <Card style={styles.eventCard}>
+                  <Card style={[styles.eventCard, { backgroundColor: theme.card }]}>
                     <View style={[styles.eventAccent, { backgroundColor: categoryInfo.color }]} />
                     <View style={styles.eventContent}>
-                      <Text style={styles.eventTitle}>{event.title}</Text>
+                      <Text style={[styles.eventTitle, { color: theme.text }]}>{event.title}</Text>
                       <View style={styles.eventMeta}>
                         <View style={styles.eventMetaItem}>
                           <Ionicons name={categoryInfo.icon as any} size={14} color={categoryInfo.color} />
@@ -303,13 +314,13 @@ export default function CalendarScreen() {
                         </View>
                         {event.time && (
                           <View style={styles.eventMetaItem}>
-                            <Ionicons name="time" size={14} color={Colors.textSecondary} />
-                            <Text style={styles.eventMetaText}>{event.time}</Text>
+                            <Ionicons name="time" size={14} color={theme.textSecondary} />
+                            <Text style={[styles.eventMetaText, { color: theme.textSecondary }]}>{event.time}</Text>
                           </View>
                         )}
                       </View>
                       {event.description && (
-                        <Text style={styles.eventDescription}>{event.description}</Text>
+                        <Text style={[styles.eventDescription, { color: theme.textSecondary }]}>{event.description}</Text>
                       )}
                     </View>
                   </Card>
@@ -317,23 +328,26 @@ export default function CalendarScreen() {
               );
             })
           ) : (
-            <Card style={styles.noEventsCard}>
-              <Text style={styles.noEventsText}>No events for this day</Text>
-              <Text style={styles.noEventsSubtext}>Tap + to add an event</Text>
+            <Card style={[styles.noEventsCard, { backgroundColor: theme.card }]}>
+              <Text style={[styles.noEventsText, { color: theme.textSecondary }]}>No events for this day</Text>
+              <Text style={[styles.noEventsSubtext, { color: theme.textLight }]}>Tap + to add an event</Text>
             </Card>
           )}
         </View>
 
         {/* Category Legend */}
         <View style={styles.legendSection}>
-          <Text style={styles.legendTitle}>Categories</Text>
+          <Text style={[styles.legendTitle, { color: theme.textSecondary }]}>Categories</Text>
           <View style={styles.legendGrid}>
-            {CATEGORIES.map((cat) => (
-              <View key={cat.key} style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: cat.color }]} />
-                <Text style={styles.legendText}>{cat.label}</Text>
-              </View>
-            ))}
+            {CATEGORIES.map((cat) => {
+              const categoryInfo = getCategoryInfo(cat.key);
+              return (
+                <View key={cat.key} style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: categoryInfo.color }]} />
+                  <Text style={[styles.legendText, { color: theme.text }]}>{cat.label}</Text>
+                </View>
+              );
+            })}
           </View>
         </View>
       </ScrollView>
@@ -341,49 +355,56 @@ export default function CalendarScreen() {
       {/* Add Event Modal */}
       <Modal visible={showModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <Card style={styles.modalContent}>
-            <Text style={styles.modalTitle}>New Event 📅</Text>
+          <Card style={[styles.modalContent, { backgroundColor: theme.card }]}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>New Event 📅</Text>
             
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: theme.background, borderColor: theme.border, color: theme.text }]}
               placeholder="Event title"
+              placeholderTextColor={theme.textLight}
               value={eventTitle}
               onChangeText={setEventTitle}
             />
             
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: theme.background, borderColor: theme.border, color: theme.text }]}
               placeholder="Time (e.g., 14:00)"
+              placeholderTextColor={theme.textLight}
               value={eventTime}
               onChangeText={setEventTime}
             />
             
-            <Text style={styles.inputLabel}>Category</Text>
+            <Text style={[styles.inputLabel, { color: theme.text }]}>Category</Text>
             <View style={styles.categoryRow}>
-              {CATEGORIES.map((cat) => (
-                <TouchableOpacity
-                  key={cat.key}
-                  style={[
-                    styles.categoryOption,
-                    eventCategory === cat.key && {
-                      backgroundColor: cat.color,
-                      borderColor: cat.color,
-                    },
-                  ]}
-                  onPress={() => setEventCategory(cat.key)}
-                >
-                  <Ionicons
-                    name={cat.icon as any}
-                    size={16}
-                    color={eventCategory === cat.key ? '#fff' : cat.color}
-                  />
-                </TouchableOpacity>
-              ))}
+              {CATEGORIES.map((cat) => {
+                const categoryInfo = getCategoryInfo(cat.key);
+                return (
+                  <TouchableOpacity
+                    key={cat.key}
+                    style={[
+                      styles.categoryOption,
+                      { borderColor: theme.border },
+                      eventCategory === cat.key && {
+                        backgroundColor: categoryInfo.color,
+                        borderColor: categoryInfo.color,
+                      },
+                    ]}
+                    onPress={() => setEventCategory(cat.key)}
+                  >
+                    <Ionicons
+                      name={cat.icon as any}
+                      size={16}
+                      color={eventCategory === cat.key ? '#fff' : categoryInfo.color}
+                    />
+                  </TouchableOpacity>
+                );
+              })}
             </View>
             
             <TextInput
-              style={[styles.input, styles.descriptionInput]}
+              style={[styles.input, styles.descriptionInput, { backgroundColor: theme.background, borderColor: theme.border, color: theme.text }]}
               placeholder="Description (optional)"
+              placeholderTextColor={theme.textLight}
               value={eventDescription}
               onChangeText={setEventDescription}
               multiline
@@ -391,16 +412,16 @@ export default function CalendarScreen() {
 
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
+                style={[styles.modalButton, styles.cancelButton, { backgroundColor: theme.background, borderColor: theme.border }]}
                 onPress={() => {
                   setShowModal(false);
                   resetEventForm();
                 }}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={[styles.cancelButtonText, { color: theme.textSecondary }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, styles.saveButton]}
+                style={[styles.modalButton, styles.saveButton, { backgroundColor: theme.primary }]}
                 onPress={saveEvent}
               >
                 <Text style={styles.saveButtonText}>Save</Text>
@@ -416,7 +437,6 @@ export default function CalendarScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   loadingContainer: {
     flex: 1,
@@ -442,7 +462,6 @@ const styles = StyleSheet.create({
   monthTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: Colors.text,
   },
   calendarCard: {
     marginBottom: 20,
@@ -456,7 +475,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 12,
     fontWeight: '600',
-    color: Colors.textSecondary,
   },
   daysGrid: {
     flexDirection: 'row',
@@ -470,20 +488,16 @@ const styles = StyleSheet.create({
     padding: 2,
   },
   todayCell: {
-    backgroundColor: Colors.primaryBg,
     borderRadius: 12,
   },
   selectedCell: {
-    backgroundColor: Colors.primary,
     borderRadius: 12,
   },
   dayNumber: {
     fontSize: 14,
     fontWeight: '500',
-    color: Colors.text,
   },
   todayNumber: {
-    color: Colors.primary,
     fontWeight: '700',
   },
   selectedNumber: {
@@ -516,13 +530,11 @@ const styles = StyleSheet.create({
   eventsSectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: Colors.text,
   },
   addEventButton: {
     width: 36,
     height: 36,
     borderRadius: 12,
-    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -542,7 +554,6 @@ const styles = StyleSheet.create({
   eventTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: Colors.text,
     marginBottom: 4,
   },
   eventMeta: {
@@ -556,11 +567,9 @@ const styles = StyleSheet.create({
   },
   eventMetaText: {
     fontSize: 12,
-    color: Colors.textSecondary,
   },
   eventDescription: {
     fontSize: 13,
-    color: Colors.textSecondary,
     marginTop: 6,
   },
   noEventsCard: {
@@ -569,11 +578,9 @@ const styles = StyleSheet.create({
   },
   noEventsText: {
     fontSize: 14,
-    color: Colors.textSecondary,
   },
   noEventsSubtext: {
     fontSize: 12,
-    color: Colors.textLight,
     marginTop: 4,
   },
   legendSection: {
@@ -582,7 +589,6 @@ const styles = StyleSheet.create({
   legendTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.textSecondary,
     marginBottom: 10,
   },
   legendGrid: {
@@ -602,7 +608,6 @@ const styles = StyleSheet.create({
   },
   legendText: {
     fontSize: 12,
-    color: Colors.text,
   },
   // Modal
   modalOverlay: {
@@ -619,23 +624,19 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: Colors.text,
     textAlign: 'center',
     marginBottom: 20,
   },
   input: {
     borderWidth: 1,
-    borderColor: Colors.border,
     borderRadius: 12,
     padding: 14,
     fontSize: 16,
     marginBottom: 12,
-    backgroundColor: Colors.background,
   },
   inputLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.text,
     marginBottom: 8,
   },
   categoryRow: {
@@ -650,7 +651,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: Colors.border,
   },
   descriptionInput: {
     minHeight: 80,
@@ -668,17 +668,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelButton: {
-    backgroundColor: Colors.background,
     borderWidth: 1,
-    borderColor: Colors.border,
   },
   cancelButtonText: {
-    color: Colors.textSecondary,
     fontWeight: '600',
   },
-  saveButton: {
-    backgroundColor: Colors.primary,
-  },
+  saveButton: {},
   saveButtonText: {
     color: '#fff',
     fontWeight: '600',

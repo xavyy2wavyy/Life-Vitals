@@ -43,6 +43,7 @@ export interface MealEntry {
   protein?: number;
   carbs?: number;
   fats?: number;
+  time?: string;
   meal_type: 'breakfast' | 'lunch' | 'dinner' | 'snack';
 }
 

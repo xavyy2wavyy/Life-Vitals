@@ -30,6 +30,8 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [seeding, setSeeding] = useState(false);
+  const [localMode, setLocalMode] = useState(api.isLocalData());
   const today = getToday();
   
   // Modals
@@ -55,13 +57,26 @@ export default function HomeScreen() {
     }
   }, [today]);
 
-  const seedMockData = async () => {
+  const toggleSampleMode = async () => {
+    const nextMode = !localMode;
+    setLocalMode(nextMode);
+    api.setLocalData(nextMode);
+    setSeeding(true);
+
     try {
-      await api.post('/seed');
-      await fetchDashboard();
-      Alert.alert('Success', 'Mock data has been seeded!');
-    } catch (error) {
-      console.error('Error seeding data:', error);
+      if (nextMode) {
+        await api.post('/seed');
+        await fetchDashboard();
+        Alert.alert('Sample Data Mode', 'Local sample data enabled.');
+      } else {
+        await fetchDashboard();
+        Alert.alert('Live Mode', 'Backend/live data mode enabled.');
+      }
+    } catch (error: any) {
+      console.error('Error toggling sample mode:', error);
+      Alert.alert('Error', `Network/API issue: ${error?.message || 'unknown'}`);
+    } finally {
+      setSeeding(false);
     }
   };
 
@@ -301,13 +316,19 @@ export default function HomeScreen() {
           </Text>
         </Card>
 
-        {/* Seed Data Button (for testing) */}
+        {/* Sample Data Mode Toggle */}
         <TouchableOpacity 
-          style={[styles.seedButton, { backgroundColor: theme.cardElevated, borderColor: theme.border }]}
-          onPress={seedMockData}
+          style={[
+            styles.seedButton,
+            { backgroundColor: theme.cardElevated, borderColor: theme.border, opacity: seeding ? 0.6 : 1 },
+          ]}
+          onPress={toggleSampleMode}
+          disabled={seeding}
         >
           <Ionicons name="sparkles" size={18} color={theme.primary} />
-          <Text style={[styles.seedButtonText, { color: theme.textSecondary }]}>Load Sample Data</Text>
+          <Text style={[styles.seedButtonText, { color: theme.textSecondary }]}> 
+            {seeding ? (localMode ? 'Switching to Live Data...' : 'Switching to Sample Data...') : (localMode ? 'Switch to Live Data' : 'Load Sample Data')}
+          </Text>
         </TouchableOpacity>
       </ScrollView>
 

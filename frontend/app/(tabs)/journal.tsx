@@ -179,9 +179,6 @@ export default function JournalScreen() {
           <Text style={[styles.title, { color: theme.text }]}>Journal</Text>
           <Text style={[styles.subtitle, { color: theme.textSecondary }]}>Your thoughts, memories, and reflections</Text>
         </View>
-        <TouchableOpacity style={[styles.addButton, { backgroundColor: theme.primary }, shadows.medium]} onPress={() => setShowCreateModal(true)}>
-          <Ionicons name="add" size={24} color="#fff" />
-        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -258,10 +255,7 @@ export default function JournalScreen() {
             <ScrollView style={styles.modalScroll} contentContainerStyle={styles.modalScrollContent} keyboardShouldPersistTaps="handled">
               <View style={[styles.promptContainer, { backgroundColor: theme.primaryBg }]}>
                 <Ionicons name="bulb" size={20} color={theme.primary} />
-                <Text style={[styles.promptText, { color: theme.primary }]}>{dailyPrompt}</Text>
-              </View>
-
-              <TextInput
+                <Text style={[styles.promptText, { color: theme.textSecondary }]}>{dailyPrompt}</Text>              </View>              <TextInput
                 style={[styles.contentInput, { backgroundColor: theme.card, borderColor: theme.border, color: theme.text }]}
                 placeholder="Write your thoughts here..."
                 placeholderTextColor={theme.textLight}
