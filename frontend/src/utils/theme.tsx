@@ -1,5 +1,41 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Platform } from 'react-native';
+// Minimal cross-platform Platform shim to avoid importing 'react-native' (only checks for web vs native)
+const Platform = { OS: typeof window !== 'undefined' && typeof document !== 'undefined' ? 'web' as const : 'native' as const };
+
+// ============================================
+// SPACING & SIZING CONSTANTS (Use these in styles!)
+// ============================================
+
+export const spacing = {
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  xxl: 24,
+  xxxl: 32,
+};
+
+export const borderRadius = {
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  full: 9999,
+};
+
+export const fontSize = {
+  xs: 10,
+  sm: 12,
+  md: 14,
+  base: 16,
+  lg: 18,
+  xl: 20,
+  xxl: 24,
+  xxxl: 28,
+  huge: 32,
+};
 
 // ============================================
 // GLOBAL THEME DEFINITIONS
@@ -109,7 +145,7 @@ export const darkTheme = {
   tabBarBorder: '#38383A',
 };
 
-export type Theme = typeof lightTheme;
+export type Theme = typeof lightTheme | typeof darkTheme;
 export type ThemeMode = 'light' | 'dark';
 
 // ============================================
@@ -224,34 +260,3 @@ export const getShadows = (theme: Theme) => ({
     elevation: 8,
   },
 });
-
-// ============================================
-// COMMON STYLES
-// ============================================
-
-export const spacing = {
-  xs: 4,
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 20,
-  xxl: 24,
-};
-
-export const borderRadius = {
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 20,
-  full: 9999,
-};
-
-export const fontSize = {
-  xs: 10,
-  sm: 12,
-  md: 14,
-  lg: 16,
-  xl: 18,
-  xxl: 24,
-  xxxl: 28,
-};

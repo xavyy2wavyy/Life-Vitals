@@ -576,28 +576,12 @@ async def get_nutrition_history(days: int = 7):
     return history
 
 # ========== FITNESS ==========
-@api_router.get("/fitness/{date}")
-async def get_workouts(date: str):
-    workouts = await db.workout_entries.find({"date": date}).to_list(100)
-    return [WorkoutEntry(**w) for w in workouts]
-
 @api_router.get("/fitness/history/{days}")
 async def get_workout_history(days: int = 30):
     today = datetime.now()
     dates = [(today - timedelta(days=i)).strftime("%Y-%m-%d") for i in range(days)]
     workouts = await db.workout_entries.find({"date": {"$in": dates}}).sort("date", -1).to_list(100)
     return [WorkoutEntry(**w) for w in workouts]
-
-@api_router.post("/fitness", response_model=WorkoutEntry)
-async def log_workout(workout: WorkoutCreate):
-    workout_obj = WorkoutEntry(**workout.dict())
-    await db.workout_entries.insert_one(workout_obj.dict())
-    return workout_obj
-
-@api_router.delete("/fitness/{workout_id}")
-async def delete_workout(workout_id: str):
-    await db.workout_entries.delete_one({"id": workout_id})
-    return {"message": "Workout deleted"}
 
 @api_router.get("/fitness/stats/{days}")
 async def get_fitness_stats(days: int = 30):
